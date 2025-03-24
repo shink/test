@@ -68,7 +68,6 @@ def _get_pr_stats(
         state="all", sort="created", direction="desc", base="main"
     )
 
-    print(all_prs.totalCount)
     report = ""
     start = start.replace(tzinfo=SH_ZONE)
     end = end.replace(tzinfo=SH_ZONE)
@@ -82,6 +81,7 @@ def _get_pr_stats(
                 and created_at >= start
                 and created_at <= end
             ):
+                print("Found PR:", pr.html_url)
                 user_prs.append(pr)
 
         def _is_merged(pr: gh_pr):
