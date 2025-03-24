@@ -7,7 +7,7 @@ employees:
   - name: Yuanhao Ji
     id: shink
 issue:
-  repo: cosdt/pytorch
+  repo: shink/test
   title: Weekly PyTorch PR Stats
   labels:
     - pytorch-pr-stat
