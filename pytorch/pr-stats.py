@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from github import Github
+from github import Auth, Github
 
 # if TYPE_CHECKING:
 from github.Issue import Issue as gh_issue
@@ -137,9 +137,13 @@ def main():
     )
     args = parser.parse_args()
 
+    # 授权
     config = _load_config(args.path)
     token = os.getenv("GITHUB_TOKEN")
-    gh = Github(token)
+    if not token:
+        raise ValueError("GITHUB_TOKEN is required")
+    auth = Auth.Token(token=token)
+    gh = Github(auth=auth)
     repo = gh.get_repo(config.repo)
     issue_repo = gh.get_repo(config.issue.repo)
 
