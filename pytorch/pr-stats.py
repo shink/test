@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
 import yaml
 
@@ -14,6 +15,9 @@ from github.Issue import Issue as gh_issue
 from github.PaginatedList import PaginatedList as gh_paginated_list
 from github.PullRequest import PullRequest as gh_pr
 from github.Repository import Repository as gh_repo
+
+
+BJ_ZONE = ZoneInfo("UTC+8")
 
 
 @dataclass
@@ -65,14 +69,17 @@ def _get_pr_stats(
     )
 
     report = ""
+    start = start.replace(tzinfo=BJ_ZONE)
+    end = end.replace(tzinfo=BJ_ZONE)
     for employee in employees:
         user_prs: list[gh_pr] = []
         for pr in all_prs:
+            created_at = pr.created_at.replace(tzinfo=BJ_ZONE)
             if (
                 pr.user
                 and pr.user.login.lower() == employee.id.lower()
-                and pr.created_at >= start
-                and pr.created_at <= end
+                and created_at >= start
+                and created_at <= end
             ):
                 user_prs.append(pr)
 
