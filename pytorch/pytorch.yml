@@ -1,19 +1,14 @@
 repo: pytorch/pytorch
 employees:
-  - name: Jiawei Li
-    id: FFFrog
-  - name: Zesheng Zong
-    id: zeshengzong
+  # - name: Jiawei Li
+  #   id: FFFrog
+  # - name: Zesheng Zong
+  #   id: zeshengzong
   - name: Yuanhao Ji
     id: shink
 issue:
   repo: cosdt/pytorch
-  title: Weekly PyTorch PR Stats (${week_start} - ${week_end})
-  body: |
-    ## PRs
-    | Author | PRs | Comments | Reviews | Review Comments | Review Requests |
-    | --- | --- | --- | --- | --- | --- |
-    ${employee_stats}
+  title: Weekly PyTorch PR Stats
   labels:
     - pytorch-pr-stat
   related:

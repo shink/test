@@ -36,6 +36,13 @@ class Config:
     employees: list[Employee]
     issue: Issue
 
+    def __post_init__(self):
+        self.employees = [
+            Employee(**emp) if isinstance(emp, dict) else emp for emp in self.employees
+        ]
+        if isinstance(self.issue, dict):
+            self.issue = Issue(**self.issue)
+
 
 def _load_config(path: str) -> Config:
     with open(path, "r") as f:
