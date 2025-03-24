@@ -65,9 +65,10 @@ def _get_pr_stats(
     repo: gh_repo, *, employees: list[Employee], start: datetime, end: datetime
 ) -> str:
     all_prs: gh_paginated_list[gh_pr] = repo.get_pulls(
-        state="all", sort="created", direction="desc"
+        state="all", sort="created", direction="desc", base="main"
     )
 
+    print(all_prs.totalCount)
     report = ""
     start = start.replace(tzinfo=SH_ZONE)
     end = end.replace(tzinfo=SH_ZONE)
