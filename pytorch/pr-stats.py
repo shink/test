@@ -55,9 +55,9 @@ def _load_config(path: str) -> Config:
 
 
 def _get_week_period() -> tuple[datetime, datetime]:
-    today = datetime.now()
+    today = datetime.now(tz=SH_ZONE).replace(hour=0, minute=0, second=0, microsecond=0)
     start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
+    end_of_week = start_of_week + timedelta(days=7)
     return start_of_week, end_of_week
 
 
@@ -68,21 +68,20 @@ def _get_pr_stats(
         state="all", sort="created", direction="desc", base="main"
     )
 
+    print(f"Generating PR stats from {start} to {end}")
+    prs: list[gh_pr] = []
+    for pr in all_prs:
+        created_at = pr.created_at.replace(tzinfo=SH_ZONE)
+        if start <= created_at and created_at < end:
+            prs.append(pr)
+
+    print(f"Found {len(prs)} PRs in the period")
     report = ""
-    start = start.replace(tzinfo=SH_ZONE)
-    end = end.replace(tzinfo=SH_ZONE)
     for employee in employees:
-        user_prs: list[gh_pr] = []
-        for pr in all_prs:
-            created_at = pr.created_at.replace(tzinfo=SH_ZONE)
-            if (
-                pr.user
-                and pr.user.login.lower() == employee.id.lower()
-                and created_at >= start
-                and created_at <= end
-            ):
-                print("Found PR:", pr.html_url)
-                user_prs.append(pr)
+        emp_prs: list[gh_pr] = []
+        for pr in prs:
+            if pr.user and pr.user.login.lower() == employee.id.lower():
+                emp_prs.append(pr)
 
         def _is_merged(pr: gh_pr):
             if pr.merged:
@@ -94,11 +93,18 @@ def _get_pr_stats(
 
         open_prs: list[gh_pr] = []
         merged_prs: list[gh_pr] = []
-        for pr in user_prs:
-            if pr.state == "open":
+        for pr in emp_prs:
+            if pr.state == "open" or pr.state == "draft":
                 open_prs.append(pr)
             elif _is_merged(pr):
                 merged_prs.append(pr)
+
+        print(
+            f"Found PRs for {employee.id}: "
+            f"{len(open_prs)} open, {len(merged_prs)} merged"
+        )
+        if open_prs and merged_prs:
+            continue
 
         report = f"## PRs by @{employee.id}\n"
         if open_prs:
@@ -132,11 +138,11 @@ def _close_issue(issue: gh_issue):
 
 def _get_last_issue(repo: gh_repo, config: Config):
     issues = repo.get_issues(state="open", labels=config.issue.labels)
-    if not issues:
-        return None
     for issue in issues:
         if config.issue.title in issue.title:
+            print(f"Found last issue: {issue.html_url}")
             return issue
+
     print("No last issue found")
     return None
 
@@ -169,6 +175,9 @@ def main():
 
         # 1. 查询 PR 统计信息
         report = _get_pr_stats(repo, employees=config.employees, start=start, end=end)
+        if not report:
+            print("No stats found")
+            return
 
         # 2. 查询上周的 Issue
         last_issue = _get_last_issue(issue_repo, config)
@@ -180,8 +189,8 @@ def main():
             _close_issue(last_issue)
         else:
             # 3. 创建 Issue
-            start_str = start.strftime("%m-%d")
-            end_str = end.strftime("%m-%d")
+            start_str = start.strftime("%m/%d")
+            end_str = end.strftime("%m/%d")
             title = f"{config.issue.title} ({start_str} - {end_str})"
             _create_issue(
                 issue_repo, title=title, body=report, labels=config.issue.labels
