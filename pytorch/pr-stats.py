@@ -17,7 +17,7 @@ from github.PullRequest import PullRequest as gh_pr
 from github.Repository import Repository as gh_repo
 
 
-BJ_ZONE = ZoneInfo("UTC+8")
+SH_ZONE = ZoneInfo("Asia/Shanghai")
 
 
 @dataclass
@@ -69,12 +69,12 @@ def _get_pr_stats(
     )
 
     report = ""
-    start = start.replace(tzinfo=BJ_ZONE)
-    end = end.replace(tzinfo=BJ_ZONE)
+    start = start.replace(tzinfo=SH_ZONE)
+    end = end.replace(tzinfo=SH_ZONE)
     for employee in employees:
         user_prs: list[gh_pr] = []
         for pr in all_prs:
-            created_at = pr.created_at.replace(tzinfo=BJ_ZONE)
+            created_at = pr.created_at.replace(tzinfo=SH_ZONE)
             if (
                 pr.user
                 and pr.user.login.lower() == employee.id.lower()
