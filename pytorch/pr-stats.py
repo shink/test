@@ -152,36 +152,40 @@ def main():
     )
     args = parser.parse_args()
 
-    # 授权
+    # 加载参数
     config = _load_config(args.path)
     token = os.getenv("GITHUB_TOKEN")
     if not token:
         raise ValueError("GITHUB_TOKEN is required")
+
+    # 授权
     auth = Auth.Token(token=token)
-    gh = Github(auth=auth)
-    repo = gh.get_repo(config.repo)
-    issue_repo = gh.get_repo(config.issue.repo)
+    with Github(auth=auth) as gh:
+        repo = gh.get_repo(config.repo)
+        issue_repo = gh.get_repo(config.issue.repo)
 
-    # 0. 计算本周起止时间
-    start, end = _get_week_period()
+        # 0. 计算本周起止时间
+        start, end = _get_week_period()
 
-    # 1. 查询 PR 统计信息
-    report = _get_pr_stats(repo, employees=config.employees, start=start, end=end)
+        # 1. 查询 PR 统计信息
+        report = _get_pr_stats(repo, employees=config.employees, start=start, end=end)
 
-    # 2. 查询上周的 Issue
-    last_issue = _get_last_issue(issue_repo, config)
+        # 2. 查询上周的 Issue
+        last_issue = _get_last_issue(issue_repo, config)
 
-    if last_issue:
-        # 3. 更新 Issue
-        _update_issue_body(last_issue, body=report)
-        # 4. 关闭上周 Issue
-        _close_issue(last_issue)
-    else:
-        # 3. 创建 Issue
-        start_str = start.strftime("%m-%d")
-        end_str = end.strftime("%m-%d")
-        title = f"{config.issue.title} ({start_str} - {end_str})"
-        _create_issue(issue_repo, title=title, body=report, labels=config.issue.labels)
+        if last_issue:
+            # 3. 更新 Issue
+            _update_issue_body(last_issue, body=report)
+            # 4. 关闭上周 Issue
+            _close_issue(last_issue)
+        else:
+            # 3. 创建 Issue
+            start_str = start.strftime("%m-%d")
+            end_str = end.strftime("%m-%d")
+            title = f"{config.issue.title} ({start_str} - {end_str})"
+            _create_issue(
+                issue_repo, title=title, body=report, labels=config.issue.labels
+            )
 
 
 if __name__ == "__main__":
