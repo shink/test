@@ -9,12 +9,11 @@ import yaml
 
 from github import Github
 
-
-if TYPE_CHECKING:
-    from github.Issue import Issue as gh_issue
-    from github.PaginatedList import PaginatedList as gh_paginated_list
-    from github.PullRequest import PullRequest as gh_pr
-    from github.Repository import Repository as gh_repo
+# if TYPE_CHECKING:
+from github.Issue import Issue as gh_issue
+from github.PaginatedList import PaginatedList as gh_paginated_list
+from github.PullRequest import PullRequest as gh_pr
+from github.Repository import Repository as gh_repo
 
 
 @dataclass
