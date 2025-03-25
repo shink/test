@@ -3,19 +3,16 @@ import os
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 import yaml
 
 from github import Auth, Github
 
-
-if TYPE_CHECKING:
-    from github.Issue import Issue as gh_issue
-    from github.PaginatedList import PaginatedList as gh_paginated_list
-    from github.PullRequest import PullRequest as gh_pr
-    from github.Repository import Repository as gh_repo
+from github.Issue import Issue as gh_issue
+from github.PaginatedList import PaginatedList as gh_paginated_list
+from github.PullRequest import PullRequest as gh_pr
+from github.Repository import Repository as gh_repo
 
 
 SH_ZONE = ZoneInfo("Asia/Shanghai")
