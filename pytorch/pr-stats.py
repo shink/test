@@ -121,7 +121,7 @@ def _get_pr_stats(
             f"{len(open_prs)} open, {len(merged_prs)} merged"
         )
 
-        report = f"## PRs by @{employee.id}\n"
+        report = f"### PRs by @{employee.id}\n"
         if open_prs:
             report += "#### Openning PRs: \n"
             for pr in open_prs:
