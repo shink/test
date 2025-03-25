@@ -197,14 +197,14 @@ def main():
 
     # 加载配置
     config = _load_config(args.path)
-    print(f"Config loaded: \n{config}")
+    print(f"Config loaded: \n{config}\n")
 
     # 加载 Token
     token = os.getenv("GITHUB_TOKEN")
     if not token:
         raise ValueError("GITHUB_TOKEN is required")
 
-    # 授权
+    # 获取授权
     auth = Auth.Token(token=token)
     with Github(auth=auth) as gh:
         repo = gh.get_repo(config.repo)

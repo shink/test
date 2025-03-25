@@ -11,7 +11,7 @@ issue:
   title: Weekly PyTorch PR Stats
   labels:
     - pytorch-pr-stat
-  body_footer: >-
+  body_footer: |-
     Related project items:
       - https://github.com/cosdt/pytorch/issues/1
 
