@@ -26,6 +26,10 @@ jobs:
 
       - name: Generate PR stats
         run: |
-          python pytorch/pr-stats.py --path pytorch/pytorch.yml
+          if [ "${{ github.event_name }}" == "push" ]; then
+            python pytorch/pr-stats.py --path pytorch/pytorch.yml --dry-run
+          else
+            python pytorch/pr-stats.py --path pytorch/pytorch.yml
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

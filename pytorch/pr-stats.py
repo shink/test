@@ -10,11 +10,12 @@ import yaml
 
 from github import Auth, Github
 
-# if TYPE_CHECKING:
-from github.Issue import Issue as gh_issue
-from github.PaginatedList import PaginatedList as gh_paginated_list
-from github.PullRequest import PullRequest as gh_pr
-from github.Repository import Repository as gh_repo
+
+if TYPE_CHECKING:
+    from github.Issue import Issue as gh_issue
+    from github.PaginatedList import PaginatedList as gh_paginated_list
+    from github.PullRequest import PullRequest as gh_pr
+    from github.Repository import Repository as gh_repo
 
 
 SH_ZONE = ZoneInfo("Asia/Shanghai")
@@ -39,6 +40,7 @@ class Config:
     repo: str
     employees: list[Employee]
     issue: Issue
+    body_footer: str
 
     def __post_init__(self):
         self.employees = [
@@ -55,15 +57,41 @@ def _load_config(path: str) -> Config:
 
 
 def _get_week_period() -> tuple[datetime, datetime]:
+    """
+    Returns the start and end of the current week in Shanghai timezone.
+    """
+
     today = datetime.now(tz=SH_ZONE).replace(hour=0, minute=0, second=0, microsecond=0)
     start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=7)
+    end_of_week = start_of_week + timedelta(days=6, hours=23, minutes=59, seconds=59)
     return start_of_week, end_of_week
 
 
+def _in_period(dt: datetime, start: datetime, end: datetime) -> bool:
+    return start <= dt and dt <= end
+
+
 def _get_pr_stats(
-    repo: gh_repo, *, employees: list[Employee], start: datetime, end: datetime
+    repo: gh_repo, *, config: Config, start: datetime, end: datetime
 ) -> str:
+    def _is_created_at_period(pr: gh_pr):
+        created_at = pr.created_at.replace(tzinfo=SH_ZONE)
+        return _in_period(created_at, start, end)
+
+    def _is_merged_at_period(pr: gh_pr):
+        if not pr.merged_at:
+            return False
+        merged_at = pr.merged_at.replace(tzinfo=SH_ZONE)
+        return _in_period(merged_at, start, end)
+
+    def _is_merged(pr: gh_pr):
+        if pr.merged:
+            return True
+        if pr.state == "closed":
+            labels = [label.name for label in pr.labels]
+            return "Merged" in labels
+        return False
+
     all_prs: gh_paginated_list[gh_pr] = repo.get_pulls(
         state="all", sort="created", direction="desc", base="main"
     )
@@ -71,25 +99,16 @@ def _get_pr_stats(
     print(f"Generating PR stats from {start} to {end}")
     prs: list[gh_pr] = []
     for pr in all_prs:
-        created_at = pr.created_at.replace(tzinfo=SH_ZONE)
-        if start <= created_at and created_at < end:
+        if _is_created_at_period(pr) or _is_merged_at_period(pr):
             prs.append(pr)
 
     print(f"Found {len(prs)} PRs in the period")
     report = ""
-    for employee in employees:
+    for employee in config.employees:
         emp_prs: list[gh_pr] = []
         for pr in prs:
             if pr.user and pr.user.login.lower() == employee.id.lower():
                 emp_prs.append(pr)
-
-        def _is_merged(pr: gh_pr):
-            if pr.merged:
-                return True
-            if pr.state == "closed":
-                labels = [label.name for label in pr.labels]
-                return "Merged" in labels
-            return False
 
         open_prs: list[gh_pr] = []
         merged_prs: list[gh_pr] = []
@@ -103,8 +122,6 @@ def _get_pr_stats(
             f"Found PRs for {employee.id}: "
             f"{len(open_prs)} open, {len(merged_prs)} merged"
         )
-        if open_prs and merged_prs:
-            continue
 
         report = f"## PRs by @{employee.id}\n"
         if open_prs:
@@ -117,23 +134,41 @@ def _get_pr_stats(
             for pr in merged_prs:
                 report += f"- {pr.html_url}\n"
 
+    if report:
+        report += f"\n{config.body_footer}\n"
     return report
 
 
-def _create_issue(repo: gh_repo, *, title: str, body: str, labels: list[str]):
-    repo.create_issue(
-        title=title,
-        body=body,
-        labels=labels,
-    )
+def _create_issue(repo: gh_repo, *, title: str, body: str, labels: list[str], **kwargs):
+    if "dry_run" in kwargs and kwargs["dry_run"]:
+        print(
+            f"Creating issue: \n"
+            f"Title: {title}\n"
+            f"Body: {body}\n"
+            f"Labels: {labels}\n"
+        )
+    else:
+        repo.create_issue(
+            title=title,
+            body=body,
+            labels=labels,
+        )
 
 
-def _update_issue_body(issue: gh_issue, *, body: str):
-    issue.edit(body=body)
+def _update_issue_body(issue: gh_issue, *, body: str, **kwargs):
+    if "dry_run" in kwargs and kwargs["dry_run"]:
+        msg = f"Updating issue: {issue.html_url}\n"
+        msg += f"Body: \n{body}\n"
+        print(msg)
+    else:
+        issue.edit(body=body)
 
 
-def _close_issue(issue: gh_issue):
-    issue.edit(state="closed")
+def _close_issue(issue: gh_issue, **kwargs):
+    if "dry_run" in kwargs and kwargs["dry_run"]:
+        print(f"Closing issue: {issue.html_url}\n")
+    else:
+        issue.edit(state="closed")
 
 
 def _get_last_issue(repo: gh_repo, config: Config):
@@ -156,6 +191,11 @@ def main():
         required=True,
         help="Path to the config YAML file",
     )
+    parser.add_argument(
+        "--dry-run",
+        store=True,
+        help="If set, only print the actions without actually doing them",
+    )
     args = parser.parse_args()
 
     # 加载参数
@@ -174,26 +214,32 @@ def main():
         start, end = _get_week_period()
 
         # 1. 查询 PR 统计信息
-        report = _get_pr_stats(repo, employees=config.employees, start=start, end=end)
+        report = _get_pr_stats(repo, config, start=start, end=end)
         if not report:
             print("No stats found")
             return
 
-        # 2. 查询上周的 Issue
+        # 2. 查询上一个 Issue
         last_issue = _get_last_issue(issue_repo, config)
 
-        if last_issue:
-            # 3. 更新 Issue
-            _update_issue_body(last_issue, body=report)
-            # 4. 关闭上周 Issue
-            _close_issue(last_issue)
+        if last_issue and _in_period(last_issue.created_at, start, end):
+            # 3.更新本周 Issue
+            _update_issue_body(last_issue, body=report, dry_run=args.dry_run)
         else:
-            # 3. 创建 Issue
+            if last_issue:
+                # 3. 关闭上周 Issue
+                _close_issue(last_issue, dry_run=args.dry_run)
+
+            # 4. 创建 Issue
             start_str = start.strftime("%m/%d")
             end_str = end.strftime("%m/%d")
             title = f"{config.issue.title} ({start_str} - {end_str})"
             _create_issue(
-                issue_repo, title=title, body=report, labels=config.issue.labels
+                issue_repo,
+                title=title,
+                body=report,
+                labels=config.issue.labels,
+                dry_run=args.dry_run,
             )
 
 
