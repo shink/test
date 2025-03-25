@@ -23,7 +23,7 @@ class Issue:
     repo: str
     title: str
     labels: list[str]
-    related: list[str]
+    body_footer: str
 
 
 @dataclass
@@ -37,7 +37,6 @@ class Config:
     repo: str
     employees: list[Employee]
     issue: Issue
-    body_footer: str
 
     def __post_init__(self):
         self.employees = [
@@ -132,7 +131,7 @@ def _get_pr_stats(
                 report += f"- {pr.html_url}\n"
 
     if report:
-        report += f"\n{config.body_footer}\n"
+        report += f"\n{config.issue.body_footer}\n"
     return report
 
 
