@@ -198,7 +198,7 @@ def main():
 
     # 加载配置
     config = _load_config(args.path)
-    print(f"Config loaded: \n{config}\n")
+    print(f"Config loaded: \n{config}")
 
     # 加载 Token
     token = os.getenv("GITHUB_TOKEN")
