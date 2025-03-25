@@ -190,7 +190,7 @@ def main():
     )
     parser.add_argument(
         "--dry-run",
-        store=True,
+        action="store_true",
         help="If set, only print the actions without actually doing them",
     )
     args = parser.parse_args()
