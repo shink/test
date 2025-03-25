@@ -58,10 +58,11 @@ def _get_week_period() -> tuple[datetime, datetime]:
     Returns the start and end of the current week in Shanghai timezone.
     """
 
-    today = datetime.now(tz=SH_ZONE).replace(hour=0, minute=0, second=0, microsecond=0)
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6, hours=23, minutes=59, seconds=59)
-    return start_of_week, end_of_week
+    today = datetime.now(tz=SH_ZONE)
+    today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = today - timedelta(days=today.weekday())
+    end = start + timedelta(days=6, hours=23, minutes=59, seconds=59)
+    return start, end
 
 
 def _in_period(dt: datetime, start: datetime, end: datetime) -> bool:
