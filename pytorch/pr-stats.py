@@ -35,6 +35,7 @@ class Employee:
 @dataclass
 class Config:
     repo: str
+    base: str
     employees: list[Employee]
     issue: Issue
 
@@ -89,7 +90,7 @@ def _get_pr_stats(
         return False
 
     all_prs: gh_paginated_list[gh_pr] = repo.get_pulls(
-        state="all", sort="created", direction="desc", base="main"
+        state="all", sort="created", direction="desc", base=config.base
     )
 
     print(f"Generating PR stats from {start} to {end}")

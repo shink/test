@@ -1,4 +1,5 @@
 repo: pytorch/pytorch
+base: main
 employees:
   # - name: Jiawei Li
   #   id: FFFrog
