@@ -195,8 +195,11 @@ def main():
     )
     args = parser.parse_args()
 
-    # 加载参数
+    # 加载配置
     config = _load_config(args.path)
+    print(f"Config loaded: \n{config}")
+
+    # 加载 Token
     token = os.getenv("GITHUB_TOKEN")
     if not token:
         raise ValueError("GITHUB_TOKEN is required")
@@ -211,7 +214,7 @@ def main():
         start, end = _get_week_period()
 
         # 1. 查询 PR 统计信息
-        report = _get_pr_stats(repo, config, start=start, end=end)
+        report = _get_pr_stats(repo, config=config, start=start, end=end)
         if not report:
             print("No stats found")
             return
