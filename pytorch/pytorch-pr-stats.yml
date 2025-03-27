@@ -13,7 +13,9 @@ issue:
   labels:
     - pytorch-pr-stat
   body_footer: |
-    Related project items:
+    ### Related project items:
     - https://github.com/shink/test/issues/9
+
+    > This is a weekly report that is generated automatically and updated every 6 hours.
 
     cc: @shink
