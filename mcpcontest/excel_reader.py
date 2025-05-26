@@ -10,7 +10,6 @@ excel_reader_mcp = FastMCP(name="ExcelReaderService")
 )
 def excel_reader(
     file_path: str,
-    sheet_name: str | None = None,
     excellent_threshold: int = 80,
 ) -> int:
     """
@@ -22,7 +21,6 @@ def excel_reader(
 
     Args:
         file_path (str): Excel 文件路径
-        sheet_name (str, optional): 工作表名称，默认为 None，表示读取第一个工作表
         excellent_threshold (int): 成绩为优的阈值，默认为 80
 
     Returns:
@@ -30,7 +28,7 @@ def excel_reader(
     """
     import pandas as pd
 
-    df = pd.read_excel(file_path, sheet_name=sheet_name)
+    df = pd.read_excel(file_path)
 
     # 第一列是姓名，其他列是各科成绩
     score_cols = df.columns[1:]
