@@ -1,3 +1,4 @@
+import ipaddress
 import re
 from typing import List
 
@@ -16,7 +17,8 @@ def wildcard_to_regex(pattern: str) -> re.Pattern:
 
 @rule_check_mcp.tool(
     name="RuleCheck",
-    description="读取 Excel 文件，计算成绩为优（各科成绩均大于阈值）的学生人数",
+    description="根据 hosts 文件和 no-proxy.cnf 文件中的内容，"
+    "计算 hosts 中未匹配 no-proxy.cnf 规则的 IP 数量",
 )
 def rule_check(
     hosts_lines: List[str],
@@ -43,17 +45,34 @@ def rule_check(
     Returns:
         int: hosts 中未匹配 no-proxy.cnf 规则的 IP 数量
     """
-    # 编译 no-proxy.cnf 中的通配符规则为正则表达式
-    patterns = [
-        wildcard_to_regex(line.strip())
-        for line in no_proxy_lines
-        if line.strip() and not line.strip().startswith("#")
-    ]
+    wildcard_patterns = []
+    cidr_networks = []
+    exact_set = set()
+
+    # 解析 no_proxy_lines
+    for line in no_proxy_lines:
+        line = line.strip()
+        # 注释
+        if not line or line.startswith("#"):
+            continue
+
+        # CIDR 格式
+        if "/" in line:
+            try:
+                cidr_networks.append(ipaddress.ip_network(line, strict=False))
+            except ValueError:
+                pass  # 忽略非法 CIDR
+        # 通配符格式
+        elif "*" in line:
+            wildcard_patterns.append(wildcard_to_regex(line))
+        else:
+            exact_set.add(line)
 
     unmatched_count = 0
 
     for line in hosts_lines:
         line = line.strip()
+        # 注释
         if not line or line.startswith("#"):
             continue
 
@@ -62,10 +81,28 @@ def rule_check(
             continue
 
         ip = parts[0]
-        hostname = parts[1]
+        hostname = parts[1] if len(parts) > 1 else ""
 
-        # 检查是否匹配任意 no-proxy 规则
-        matched = any(p.fullmatch(ip) or p.fullmatch(hostname) for p in patterns)
+        matched = False
+
+        # 1. 精确匹配
+        if ip in exact_set or hostname in exact_set:
+            matched = True
+
+        # 2. 通配符匹配
+        if not matched:
+            matched = any(
+                pattern.fullmatch(ip) or pattern.fullmatch(hostname)
+                for pattern in wildcard_patterns
+            )
+
+        # 3. CIDR 网段匹配（仅限 IP）
+        if not matched:
+            try:
+                ip_obj = ipaddress.ip_address(ip)
+                matched = any(ip_obj in net for net in cidr_networks)
+            except ValueError:
+                pass  # 无效 IP
 
         if not matched:
             unmatched_count += 1
